@@ -35,9 +35,8 @@ def stock_query():
     return render_template('stock.html', stock_name = stock_name, stock_id = stock_id, 
                             column_names = column_names, df = df)
 
-@app.route('/stock/213')
-def stock_page2():
-    stock_id = request.args.get('stock_id')
-    return '<h1>Hello, World! %s</h1>' % stock_id
 
 
+
+if __name__=='__main__':
+    app.run(debug=True)

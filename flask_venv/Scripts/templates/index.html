@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="row">
+    <div class="col">
+        <h1>{{name}}, Welcome. This is Home Page</h1>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Accusamus ducimus eveniet laudantium voluptatem labore, atque perferendis reiciendis quas ipsam a est assumenda eos distinctio molestiae nam itaque, cum voluptates eligendi.</p>
+    </div>
+    <form action={{ url_for('stock_query') }} method="get">
+        <input type="text" name='stock_id' class="form-control" placeholder="請輸入股票代號">
+        <span class="input-group-btn">
+            <button class="btn btn-default" type="submit">
+                GO ！
+            </button>
+            <script>
+                $(function() {
+                    $(".btn").click(function(){
+                        $(this).button('loading').delay(1000).queue(function() {
+                        // $(this).button('reset');
+                        // $(this).dequeue(); 
+                        });
+                    });
+                });  
+            </script>
+        </span>
+    </form>
+    <div class="col">
+        <h1>This is {{name}}'s first Page</h1>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Maiores nemo maxime culpa, iure, minima ducimus magni non hic similique tempore impedit necessitatibus eum! Sunt adipisci porro aperiam fugit magnam delectus.</p>
+    </div>
+</div>
+{% endblock %}

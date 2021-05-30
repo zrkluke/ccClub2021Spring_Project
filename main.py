@@ -18,7 +18,7 @@ def hello():
 @app.route('/stock/')
 def stock_query():
     stock_id = request.args.get('stock_id')
-    df = pd.read_csv('./database/' + stock_id + '.csv')
+    df = pd.read_csv('.\\database\\' + stock_id + '.csv')
     if stock_id == '1101':
         stock_name = '台泥'
     elif stock_id == '1234':

@@ -3,6 +3,8 @@
 from flask import Flask, request, render_template, url_for, redirect
 from config import DevConfig
 import pandas as pd
+import os
+from goodinfo_crawler import *
 
 # 初始化 Flask 類別成為 instance
 app = Flask(__name__)
@@ -21,24 +23,28 @@ def stock_query():
     stock_name = type(stock_id)
     table = pd.read_csv('./database/stock_id.csv')
     if stock_id.isdigit():
+
         if int(stock_id) in table['股票代號'].values:
             stock_name = table[table['股票代號'] == int(stock_id)]['名稱'].values[0]
         else:
-            return render_template('stock.html')
+            return render_template('stock.html') # 此股票不存在
+
     elif stock_id.isalpha():
+
         if stock_id in table['名稱'].values:
             stock_name = stock_id
             stock_id = str(table[table['名稱'] == stock_id]['股票代號'].values[0])
         else:
-            return render_template('stock.html')
+            return render_template('stock.html') # 此股票不存在
+
     else:
-        pass
+        return render_template('stock.html') # 此股票不存在
         
-    df = pd.read_csv('.\\database\\' + stock_id + '.csv')
- 
+    df = pd.read_csv('.\\database\\' + stock_id + '_year.csv')
     column_names = df.columns.tolist()
     df = df.astype({'年度':'object'})
     df = df.values.tolist()
+
     return render_template('stock.html', stock_name = stock_name, stock_id = stock_id, 
                             column_names = column_names, df = df)
 
@@ -46,4 +52,18 @@ def stock_query():
 
 
 if __name__=='__main__':
+    
+    file = 'database/stock_id.csv'
+    if os.path.exists(file):
+        pass
+    else:
+        update_stock_list()
+        update_stock_year_data()
+        update_stock_quarter_data()
+
     app.run(debug=True)
+    
+
+
+        
+

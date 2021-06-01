@@ -54,15 +54,6 @@ def stock_query():
 
 if __name__=='__main__':
     
-    file = 'database/stock_id.csv'
-    if os.path.exists(file):
-        pass
-    else:
-        update_stock_list()
-        update_stock_year_data()
-        update_stock_quarter_data()
-        
-
     app.run(debug=True)
     
 

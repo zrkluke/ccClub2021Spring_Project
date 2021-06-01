@@ -3,6 +3,7 @@ from time import sleep
 import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
+import numpy as np
 import pandas as pd
 import os
 
@@ -42,8 +43,8 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
     dfs = pd.read_html(table.prettify())
     df = dfs[1]
     row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-    year = df.iloc[0,1:14:2].values
-    data_y = df.iloc[row, 1:14:2].astype('float').values
+    year = df.iloc[0,1:14:2].replace('-', np.nan).values
+    data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
     RE_year = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})   
     
     QRY_TIME = soup.select_one('#QRY_TIME')
@@ -62,11 +63,11 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
             dfs = pd.read_html(table.prettify())
             df = dfs[1]
             row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-            year = df.iloc[0,1:14:2].values
-            data_y = df.iloc[row, 1:14:2].astype('float').values
+            year = df.iloc[0,1:14:2].replace('-', np.nan).values
+            data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
             
             df = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
-            RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True)
+            RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True).dropna()
             
             sleep(DELAY)
 
@@ -82,10 +83,10 @@ def get_EPS_ROE_ROA_year(stockNo):
     
     dfs = pd.read_html(table.prettify())
     df = dfs[1]
-    year = df.iloc[0,1:].values
-    eps = df.iloc[7,1:].astype('float').values
-    roe = df.iloc[9,1:].astype('float').values
-    roa = df.iloc[10,1:].astype('float').values
+    year = df.iloc[0,1:].replace('-', np.nan).values
+    eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
+    roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
+    roa = df.iloc[10,1:].replace('-', np.nan).astype('float').values
     
     EPS_y = pd.DataFrame({'年度':year, '每股稅後盈餘(EPS)':eps})
     ROE_y = pd.DataFrame({'年度':year, '股東權益報酬率(ROE)':roe})
@@ -106,18 +107,18 @@ def get_EPS_ROE_ROA_year(stockNo):
             
             dfs = pd.read_html(table.prettify())
             df = dfs[1]
-            year = df.iloc[0,1:].values
-            eps = df.iloc[7,1:].astype('float').values
-            roe = df.iloc[9,1:].astype('float').values
-            roa = df.iloc[10,1:].astype('float').values
+            year = df.iloc[0,1:].replace('-', np.nan).values
+            eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
+            roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
+            roa = df.iloc[10,1:].replace('-', np.nan).astype('float').values
             
             df_eps = pd.DataFrame({'年度':year, '每股稅後盈餘(EPS)':eps})
             df_roe = pd.DataFrame({'年度':year, '股東權益報酬率(ROE)':roe})
             df_roa = pd.DataFrame({'年度':year, '資產報酬率(ROA)':roa})
             
-            EPS_y = pd.concat([EPS_y, df_eps], axis = 0, ignore_index = True)
-            ROE_y = pd.concat([ROE_y, df_roe], axis = 0, ignore_index = True)
-            ROA_y = pd.concat([ROA_y, df_roa], axis = 0, ignore_index = True)
+            EPS_y = pd.concat([EPS_y, df_eps], axis = 0, ignore_index = True).dropna()
+            ROE_y = pd.concat([ROE_y, df_roe], axis = 0, ignore_index = True).dropna()
+            ROA_y = pd.concat([ROA_y, df_roa], axis = 0, ignore_index = True).dropna()
             
             sleep(DELAY)
     
@@ -133,8 +134,8 @@ def get_cash_dividend_year(stockNo):
     
     dfs = pd.read_html(table.prettify())
     df = dfs[0]
-    year = df.iloc[:,19][~df.iloc[:,19].isin(['-'])].values.tolist()
-    cash = df.iloc[:,3][~df.iloc[:,3].isin(['-'])].astype('float').values.tolist()
+    year = df.iloc[:,19].replace('-', np.nan).values.tolist()
+    cash = df.iloc[:,3].replace('-', np.nan).astype('float').values.tolist()
     
     year_new = []
     cash_new = []
@@ -188,7 +189,7 @@ def get_cash_dividend_year(stockNo):
             
         i += 1
         
-    CashDividend_y = pd.DataFrame({'年度':year_new, '現金股利':cash_new}).drop_duplicates()
+    CashDividend_y = pd.DataFrame({'年度':year_new, '現金股利':cash_new}).drop_duplicates().dropna()
     
     return CashDividend_y
 
@@ -327,3 +328,11 @@ def update_stock_quarter_data():
                 data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
                 data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]
                 data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)
+
+
+if __name__=='__main__':
+    
+    update_stock_list()
+    update_stock_year_data()
+    update_stock_quarter_data()
+        

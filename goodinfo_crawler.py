@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 import pandas as pd
+import os
 
 user_agent = UserAgent()
 headers = {'User-Agent': user_agent.random}
@@ -132,8 +133,8 @@ def get_cash_dividend_year(stockNo):
     
     dfs = pd.read_html(table.prettify())
     df = dfs[0]
-    year = df.iloc[:,19].values.tolist()
-    cash = df.iloc[:,3].astype('float').values.tolist()
+    year = df.iloc[:,19][~df.iloc[:,19].isin(['-'])].values.tolist()
+    cash = df.iloc[:,3][~df.iloc[:,3].isin(['-'])].astype('float').values.tolist()
     
     year_new = []
     cash_new = []
@@ -196,22 +197,26 @@ def update_stock_year_data():
     stock_list = table['股票代號'].astype(str).values.tolist()
     for stockNo in stock_list:
         print(stockNo)
-        RE_y = get_retained_earnings_year(stockNo)
-        sleep(DELAY)
-
-        if isinstance(RE_y, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
+        file1 = 'database/' + stockNo + '_year.csv'
+        if os.path.exists(file1):
             continue
         else:
-            EPS_y, ROE_y, ROA_y = get_EPS_ROE_ROA_year(stockNo)
+            RE_y = get_retained_earnings_year(stockNo)
             sleep(DELAY)
 
-            CashDividend_y = get_cash_dividend_year(stockNo)
-            sleep(DELAY)
+            if isinstance(RE_y, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
+                continue
+            else:
+                EPS_y, ROE_y, ROA_y = get_EPS_ROE_ROA_year(stockNo)
+                sleep(DELAY)
 
-            data_year = pd.concat([RE_y, EPS_y, ROE_y, ROA_y, CashDividend_y], axis = 1, join = 'inner')
-            data_year = data_year.loc[:,~data_year.columns.duplicated()] 
-            data_year = data_year.astype({'年度':'object'})
-            data_year.to_csv('database\\' + stockNo + '_year.csv', encoding = 'utf-8', index = False)
+                CashDividend_y = get_cash_dividend_year(stockNo)
+                sleep(DELAY)
+
+                data_year = pd.concat([RE_y, EPS_y, ROE_y, ROA_y, CashDividend_y], axis = 1, join = 'inner')
+                data_year = data_year.loc[:,~data_year.columns.duplicated()] 
+                data_year = data_year.astype({'年度':'object'})
+                data_year.to_csv('database\\' + stockNo + '_year.csv', encoding = 'utf-8', index = False)
 
 def get_retained_earnings_quarter(stockNo):
     url = 'https://goodinfo.tw/StockInfo/StockFinDetail.asp' # 資產負債表
@@ -306,15 +311,19 @@ def update_stock_quarter_data():
     stock_list = table['股票代號'].astype(str).values.tolist()
     for stockNo in stock_list:
         print(stockNo)
-        RE_q = get_retained_earnings_quarter(stockNo)
-        sleep(DELAY)
-        
-        if isinstance(RE_q, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
+        file2 = 'database/' + stockNo + '_quarter.csv'
+        if os.path.exists(file2):
             continue
         else:
-            EPS_q, ROE_q, ROA_q = get_EPS_ROE_ROA_quarter(stockNo)
+            RE_q = get_retained_earnings_quarter(stockNo)
             sleep(DELAY)
+            
+            if isinstance(RE_q, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
+                continue
+            else:
+                EPS_q, ROE_q, ROA_q = get_EPS_ROE_ROA_quarter(stockNo)
+                sleep(DELAY)
 
-            data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
-            data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]
-            data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)
+                data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
+                data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]
+                data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)

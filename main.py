@@ -1,6 +1,7 @@
 # main.py
 
 from flask import Flask, request, render_template, url_for, redirect
+from requests.models import parse_header_links
 from config import DevConfig
 import pandas as pd
 import os
@@ -60,6 +61,7 @@ if __name__=='__main__':
         update_stock_list()
         update_stock_year_data()
         update_stock_quarter_data()
+        
 
     app.run(debug=True)
     

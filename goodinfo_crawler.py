@@ -134,7 +134,7 @@ def get_cash_dividend_year(stockNo):
     
     dfs = pd.read_html(table.prettify())
     df = dfs[0]
-    year = df.iloc[:,19].replace('-', np.nan).values.tolist()
+    year = df.iloc[:,19].values.tolist()
     cash = df.iloc[:,3].replace('-', np.nan).astype('float').values.tolist()
     
     year_new = []

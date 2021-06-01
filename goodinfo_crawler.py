@@ -52,7 +52,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
     values = [item.get('value') for item in options]
     
     if len(values) > 7:
-        sleep(DELAY)
+        sleep(random.choice(delay_choice))
         for j in range(7, len(values), 7):
             my_params = {'RPT_CAT':'BS_M_YEAR', 'QRY_TIME':values[j], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -69,7 +69,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
             df = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
             RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True).dropna()
             
-            sleep(DELAY)
+            sleep(random.choice(delay_choice))
 
     return RE_year
 
@@ -97,7 +97,7 @@ def get_EPS_ROE_ROA_year(stockNo):
     values = [item.get('value') for item in options]
     
     if len(values) > 12:
-        sleep(DELAY)
+        sleep(random.choice(delay_choice))
         for i in range(12, len(values), 12):
             my_params = {'RPT_CAT':'XX_M_YEAR', 'QRY_TIME':values[i], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -120,7 +120,7 @@ def get_EPS_ROE_ROA_year(stockNo):
             ROE_y = pd.concat([ROE_y, df_roe], axis = 0, ignore_index = True).dropna()
             ROA_y = pd.concat([ROA_y, df_roa], axis = 0, ignore_index = True).dropna()
             
-            sleep(DELAY)
+            sleep(random.choice(delay_choice))
     
     return EPS_y, ROE_y, ROA_y
 
@@ -197,22 +197,22 @@ def update_stock_year_data():
     table = pd.read_csv('./database/stock_id.csv', encoding = 'utf-8')
     stock_list = table['股票代號'].astype(str).values.tolist()
     for stockNo in stock_list:
-        print(stockNo)
+        print(stockNo, end = ' ')
         file1 = 'database/' + stockNo + '_year.csv'
         if os.path.exists(file1):
             continue
         else:
             RE_y = get_retained_earnings_year(stockNo)
-            sleep(DELAY)
+            sleep(random.choice(delay_choice))
 
             if isinstance(RE_y, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
                 continue
             else:
                 EPS_y, ROE_y, ROA_y = get_EPS_ROE_ROA_year(stockNo)
-                sleep(DELAY)
+                sleep(random.choice(delay_choice))
 
                 CashDividend_y = get_cash_dividend_year(stockNo)
-                sleep(DELAY)
+                sleep(random.choice(delay_choice))
 
                 data_year = pd.concat([RE_y, EPS_y, ROE_y, ROA_y, CashDividend_y], axis = 1, join = 'inner')
                 data_year = data_year.loc[:,~data_year.columns.duplicated()] 
@@ -239,7 +239,7 @@ def get_retained_earnings_quarter(stockNo):
     values = [item.get('value') for item in options]
     
     if len(values) > 7:
-        sleep(DELAY)
+        sleep(random.choice(delay_choice))
         for j in range(7, len(values), 7):
             my_params = {'RPT_CAT':'BS_M_QUAR', 'QRY_TIME':values[j], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -255,6 +255,8 @@ def get_retained_earnings_quarter(stockNo):
             
             df = pd.DataFrame({'季度':quarter,'保留盈餘合計': data_q})
             RE_quarter = pd.concat([RE_quarter, df], axis = 0, ignore_index = True)
+            
+            sleep(random.choice(delay_choice))
                 
     return RE_quarter
 
@@ -282,7 +284,7 @@ def get_EPS_ROE_ROA_quarter(stockNo):
     values = [item.get('value') for item in options]
     
     if len(values) > 10:
-        sleep(DELAY)
+        sleep(random.choice(delay_choice))
         for i in range(10, len(values), 10):
             my_params = {'RPT_CAT':'XX_M_QUAR', 'QRY_TIME':values[i], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -304,6 +306,8 @@ def get_EPS_ROE_ROA_quarter(stockNo):
             EPS_q = pd.concat([EPS_q, df_eps], axis = 0, ignore_index = True)
             ROE_q = pd.concat([ROE_q, df_roe], axis = 0, ignore_index = True)
             ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
+
+            sleep(random.choice(delay_choice))
             
     return EPS_q, ROE_q, ROA_q
 
@@ -317,13 +321,13 @@ def update_stock_quarter_data():
             continue
         else:
             RE_q = get_retained_earnings_quarter(stockNo)
-            sleep(DELAY)
+            sleep(random.choice(delay_choice))
             
             if isinstance(RE_q, pd.DataFrame) == False: # 跳過抓不到資料的股票代碼
                 continue
             else:
                 EPS_q, ROE_q, ROA_q = get_EPS_ROE_ROA_quarter(stockNo)
-                sleep(DELAY)
+                sleep(random.choice(delay_choice))
 
                 data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
                 data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]

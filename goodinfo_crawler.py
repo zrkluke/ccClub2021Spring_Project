@@ -9,8 +9,8 @@ import os
 
 user_agent = UserAgent()
 headers = {'User-Agent': user_agent.random}
-delay_choice = [random.randint(15,30) for i in range(10)]
-DELAY = random.choice(delay_choice)
+delay_choice = [random.randint(30,60) for i in range(10)]
+
 
 def update_stock_list():
     TWSE_url = 'http://isin.twse.com.tw/isin/C_public.jsp?strMode=2' # 上市
@@ -218,6 +218,7 @@ def update_stock_year_data():
                 data_year = data_year.loc[:,~data_year.columns.duplicated()] 
                 data_year = data_year.astype({'年度':'object'})
                 data_year.to_csv('database\\' + stockNo + '_year.csv', encoding = 'utf-8', index = False)
+                sleep(120)
 
 def get_retained_earnings_quarter(stockNo):
     url = 'https://goodinfo.tw/StockInfo/StockFinDetail.asp' # 資產負債表
@@ -332,11 +333,17 @@ def update_stock_quarter_data():
                 data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
                 data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]
                 data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)
+                sleep(120)
 
 
 if __name__=='__main__':
     
-    update_stock_list()
+    file = 'database/stock_id.csv'
+    if os.path.exists(file):
+        pass
+    else:
+        update_stock_list()
+
     update_stock_year_data()
     update_stock_quarter_data()
         

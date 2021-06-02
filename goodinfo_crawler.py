@@ -9,7 +9,7 @@ import os
 
 user_agent = UserAgent()
 headers = {'User-Agent': user_agent.random}
-delay_choice = [random.randint(30,60) for i in range(10)]
+delay_choice = [random.randint(20,40) for i in range(30)]
 
 
 def update_stock_list():
@@ -53,6 +53,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
     
     if len(values) > 7:
         sleep(random.choice(delay_choice))
+        COUNT = 1
         for j in range(7, len(values), 7):
             my_params = {'RPT_CAT':'BS_M_YEAR', 'QRY_TIME':values[j], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -70,6 +71,10 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
             RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True).dropna()
             
             sleep(random.choice(delay_choice))
+
+            COUNT += 1
+            if COUNT == 3:
+                break
 
     return RE_year
 
@@ -98,6 +103,7 @@ def get_EPS_ROE_ROA_year(stockNo):
     
     if len(values) > 12:
         sleep(random.choice(delay_choice))
+        COUNT = 1
         for i in range(12, len(values), 12):
             my_params = {'RPT_CAT':'XX_M_YEAR', 'QRY_TIME':values[i], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -121,6 +127,10 @@ def get_EPS_ROE_ROA_year(stockNo):
             ROA_y = pd.concat([ROA_y, df_roa], axis = 0, ignore_index = True).dropna()
             
             sleep(random.choice(delay_choice))
+
+            COUNT += 1
+            if COUNT == 2:
+                break
     
     return EPS_y, ROE_y, ROA_y
 
@@ -218,7 +228,7 @@ def update_stock_year_data():
                 data_year = data_year.loc[:,~data_year.columns.duplicated()] 
                 data_year = data_year.astype({'年度':'object'})
                 data_year.to_csv('database\\' + stockNo + '_year.csv', encoding = 'utf-8', index = False)
-                sleep(120)
+                sleep(random.choice(delay_choice))
 
 def get_retained_earnings_quarter(stockNo):
     url = 'https://goodinfo.tw/StockInfo/StockFinDetail.asp' # 資產負債表
@@ -241,6 +251,7 @@ def get_retained_earnings_quarter(stockNo):
     
     if len(values) > 7:
         sleep(random.choice(delay_choice))
+        COUNT = 1
         for j in range(7, len(values), 7):
             my_params = {'RPT_CAT':'BS_M_QUAR', 'QRY_TIME':values[j], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -258,6 +269,10 @@ def get_retained_earnings_quarter(stockNo):
             RE_quarter = pd.concat([RE_quarter, df], axis = 0, ignore_index = True)
             
             sleep(random.choice(delay_choice))
+
+            COUNT += 1
+            if COUNT == 4:
+                break
                 
     return RE_quarter
 
@@ -286,6 +301,7 @@ def get_EPS_ROE_ROA_quarter(stockNo):
     
     if len(values) > 10:
         sleep(random.choice(delay_choice))
+        COUNT = 1
         for i in range(10, len(values), 10):
             my_params = {'RPT_CAT':'XX_M_QUAR', 'QRY_TIME':values[i], 'STOCK_ID':stockNo}
             response = requests.get(url, params = my_params, timeout = 5, headers = headers)
@@ -309,6 +325,10 @@ def get_EPS_ROE_ROA_quarter(stockNo):
             ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
 
             sleep(random.choice(delay_choice))
+
+            COUNT += 1
+            if COUNT == 3:
+                break
             
     return EPS_q, ROE_q, ROA_q
 
@@ -333,7 +353,7 @@ def update_stock_quarter_data():
                 data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
                 data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()]
                 data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)
-                sleep(120)
+                sleep(random.choice(delay_choice))
 
 
 if __name__=='__main__':

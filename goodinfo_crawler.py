@@ -43,7 +43,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
     dfs = pd.read_html(table.prettify())
     df = dfs[1]
     row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-    year = df.iloc[0,1:14:2].replace('-', np.nan).values
+    year = df.iloc[0,1:14:2].values
     data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
     RE_year = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})   
     
@@ -64,7 +64,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
             dfs = pd.read_html(table.prettify())
             df = dfs[1]
             row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-            year = df.iloc[0,1:14:2].replace('-', np.nan).values
+            year = df.iloc[0,1:14:2].values
             data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
             
             df = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
@@ -88,7 +88,7 @@ def get_EPS_ROE_ROA_year(stockNo):
     
     dfs = pd.read_html(table.prettify())
     df = dfs[1]
-    year = df.iloc[0,1:].replace('-', np.nan).values
+    year = df.iloc[0,1:].values
     eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
     roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
     roa = df.iloc[10,1:].replace('-', np.nan).astype('float').values
@@ -113,7 +113,7 @@ def get_EPS_ROE_ROA_year(stockNo):
             
             dfs = pd.read_html(table.prettify())
             df = dfs[1]
-            year = df.iloc[0,1:].replace('-', np.nan).values
+            year = df.iloc[0,1:].values
             eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
             roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
             roa = df.iloc[10,1:].replace('-', np.nan).astype('float').values
@@ -207,7 +207,7 @@ def update_stock_year_data():
     table = pd.read_csv('./database/stock_id.csv', encoding = 'utf-8')
     stock_list = table['股票代號'].astype(str).values.tolist()
     for stockNo in stock_list:
-        print(stockNo, end = ' ')
+        print(stockNo)
         file1 = 'database/' + stockNo + '_year.csv'
         if os.path.exists(file1):
             continue
@@ -242,7 +242,7 @@ def get_retained_earnings_quarter(stockNo):
     df = dfs[1]
     row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
     quarter = df.iloc[0,1:14:2].values
-    data_q = df.iloc[row, 1:14:2].astype('float').values
+    data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
     RE_quarter = pd.DataFrame({'季度':quarter, '保留盈餘合計': data_q})
     
     QRY_TIME = soup.select_one('#QRY_TIME')
@@ -263,7 +263,7 @@ def get_retained_earnings_quarter(stockNo):
             df = dfs[1]
             row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
             quarter = df.iloc[0,1:14:2].values
-            data_q = df.iloc[row, 1:14:2].astype('float').values
+            data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
             
             df = pd.DataFrame({'季度':quarter,'保留盈餘合計': data_q})
             RE_quarter = pd.concat([RE_quarter, df], axis = 0, ignore_index = True)
@@ -287,9 +287,9 @@ def get_EPS_ROE_ROA_quarter(stockNo):
     dfs = pd.read_html(table.prettify())
     df = dfs[1]
     quarter = df.iloc[0,1:].values
-    eps = df.iloc[7,1:].astype('float').values
-    roe = df.iloc[9,1:].astype('float').values
-    roa = df.iloc[11,1:].astype('float').values
+    eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
+    roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
+    roa = df.iloc[11,1:].replace('-', np.nan).astype('float').values
     
     EPS_q = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
     ROE_q = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
@@ -312,9 +312,9 @@ def get_EPS_ROE_ROA_quarter(stockNo):
             dfs = pd.read_html(table.prettify())
             df = dfs[1]
             quarter = df.iloc[0,1:].values
-            eps = df.iloc[7,1:].astype('float').values
-            roe = df.iloc[9,1:].astype('float').values
-            roa = df.iloc[11,1:].astype('float').values
+            eps = df.iloc[7,1:].replace('-', np.nan).astype('float').values
+            roe = df.iloc[9,1:].replace('-', np.nan).astype('float').values
+            roa = df.iloc[11,1:].replace('-', np.nan).astype('float').values
             
             df_eps = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
             df_roe = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
@@ -364,6 +364,6 @@ if __name__=='__main__':
     else:
         update_stock_list()
 
-    update_stock_year_data()
+    
     update_stock_quarter_data()
         

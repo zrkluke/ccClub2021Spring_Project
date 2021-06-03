@@ -35,7 +35,7 @@ def update_stock_list():
 def get_retained_earnings_year(stockNo): # 保留盈餘合計
     url = 'https://goodinfo.tw/StockInfo/StockFinDetail.asp' # goodinfo資產負債表
     my_params = {'RPT_CAT':'BS_M_YEAR', 'STOCK_ID':stockNo}
-    response = requests.get(url, params = my_params, timeout = 5, headers = headers)
+    response = requests.get(url, params = my_params, timeout = 10, headers = headers)
     response.encoding = 'utf-8'
     soup = BeautifulSoup(response.text, 'lxml')
     table = soup.select_one('#txtFinBody')
@@ -56,7 +56,7 @@ def get_retained_earnings_year(stockNo): # 保留盈餘合計
         COUNT = 1
         for j in range(7, len(values), 7):
             my_params = {'RPT_CAT':'BS_M_YEAR', 'QRY_TIME':values[j], 'STOCK_ID':stockNo}
-            response = requests.get(url, params = my_params, timeout = 5, headers = headers)
+            response = requests.get(url, params = my_params, timeout = 10, headers = headers)
             response.encoding = 'utf-8'
             soup = BeautifulSoup(response.text, 'lxml')
             table = soup.select_one('#txtFinBody')
@@ -94,13 +94,13 @@ def fetch_EPS_ROE_ROA_year(stockNo):
     roa = bts.select('#bttb > table > tbody > tr:nth-child(18) > td')
 
     Year = [year[i].text[:4] for i in range(1, len(year))]
-    EPS = [float(eps[i].text) for i in range(1, len(eps))]
-    ROE = [float(roe[i].text) for i in range(1, len(roe))]
-    ROA = [float(roa[i].text) for i in range(1, len(roa))]
+    EPS = [eps[i].text for i in range(1, len(eps))]
+    ROE = [roe[i].text for i in range(1, len(roe))]
+    ROA = [roa[i].text for i in range(1, len(roa))]
 
-    EPS_y = pd.DataFrame({'年度':Year, '每股稅後盈餘(EPS)':EPS})
-    ROE_y = pd.DataFrame({'年度':Year, '股東權益報酬率(ROE)':ROE})
-    ROA_y = pd.DataFrame({'年度':Year, '資產報酬率(ROA)':ROA})
+    EPS_y = pd.DataFrame({'年度':Year, '每股稅後盈餘(EPS)':EPS}).replace('-', np.nan).astype({'每股稅後盈餘(EPS)':float})
+    ROE_y = pd.DataFrame({'年度':Year, '股東權益報酬率(ROE)':ROE}).replace('-', np.nan).astype({'股東權益報酬率(ROE)':float})
+    ROA_y = pd.DataFrame({'年度':Year, '資產報酬率(ROA)':ROA}).replace('-', np.nan).astype({'資產報酬率(ROA)':float})
 
     return EPS_y, ROE_y, ROA_y
 

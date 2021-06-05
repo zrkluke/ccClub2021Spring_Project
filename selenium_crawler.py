@@ -1,5 +1,5 @@
-import random
 from time import sleep
+from bs4.builder import HTMLTreeBuilder
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
@@ -7,17 +7,31 @@ import pandas as pd
 import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-# from selenium.webdriver.chrome.options import Options
 
+# from selenium.webdriver.chrome.options import Options
 # chrome_options = Options()
 # chrome_options.add_argument('--disable-gpu')
 
 options = webdriver.ChromeOptions()
-# options.add_argument('--headless') # 可以不讓瀏覽器執行在前景，而是在背景執行（不讓我們肉眼看得見）
+options.add_argument('--headless') # 可以不讓瀏覽器執行在前景，而是在背景執行（不讓我們肉眼看得見）
+
 # error: (Timed out receiving message from renderer exception)
+# happened randomly at the start of the test after calling for driver.get(url) without throwing any exception, it just freezes
+# "Timed out receiving message from renderer" means that chromedriver can't receive a response from chrome in time, it's a miscommunication between chromedriver and chrome.
 options.add_argument('--disable-gpu') # google document 提到需要加上這個屬性來規避 bug 
-options.add_experimental_option('excludeSwitches', ['enable-logging'])
-delay_choice = [random.randint(10,20) for i in range(10)]
+# 主要問題可能是Selenium加載頁面時間過長
+options.add_argument('start-maximized')
+options.add_argument('enable-automation')
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-infobars')
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('--disable-browser-side-navigation')
+
+# error: (USB: usb_device_handle_win.cc:1056 Failed to read descriptor from node connection)
+options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消log
+
+# error: (selenium.common.exceptions.WebDriverException: Message: unknown error : net::ERR_CONNECTION_TIMED_OUT)
+# 連線失敗，請檢察連線
 
 def update_stock_list():
     TWSE_url = 'http://isin.twse.com.tw/isin/C_public.jsp?strMode=2' # 上市
@@ -91,7 +105,7 @@ def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
                 driver.find_element(By.ID, "QRY_TIME").click()
                 sleep(7)
             except Exception as e:
-                print("沒有2013年以前的資產負債表", e)
+                print(stockNo + "沒有2013年以前的資產負債表")
             else:
                 #取得2013~2007年的資料
                 html = driver.page_source # 取得html文字
@@ -107,7 +121,8 @@ def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
                 df = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
                 RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True).dropna()
             finally:
-                driver.close()
+                driver.close() # 關閉分頁視窗
+                # driver.quit() # 關閉視窗+關閉driver.exe，釋放記憶體
 
             return RE_year
 
@@ -183,8 +198,182 @@ def fetch_stock_year_data():
                 data_year.to_csv('database\\' + stockNo + '_year.csv', encoding = 'utf-8', index = False)
                 sleep(3)
 
+def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
+    # 進入Goodinfo首頁  
+    driver = webdriver.Chrome()   
+    driver.get('https://goodinfo.tw/StockInfo/index.asp')
+    driver.implicitly_wait(1)
+    driver.set_window_size(1242, 706)
+
+    #找到最上方查詢框輸入股票代碼並送出
+    driver.find_element(By.ID, "txtStockCode").click()
+    driver.find_element(By.ID, "txtStockCode").send_keys(stockNo)
+    driver.find_element(By.CSS_SELECTOR, "input:nth-child(2)").click()
+    driver.implicitly_wait(3)
+    try:
+        #切換到資產負債表的頁面
+        driver.find_element(By.LINK_TEXT, "資產負債表").click()
+        driver.implicitly_wait(3)
+    except:
+        driver.close()
+        RE_quarter = None
+    else:
+        #取得2021Q1~2019Q3年的資料
+        html = driver.page_source # 取得html文字
+        soup = BeautifulSoup(html, 'lxml')
+        table = soup.select_one('#txtFinBody')
+        
+        #資料整理
+        dfs = pd.read_html(table.prettify())
+        if len(dfs) == 1: # 代表抓不到資料
+            driver.close()
+            RE_quarter = None
+        else:
+            df = dfs[1]
+            row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
+            quarter = df.iloc[0,1:14:2].values
+            data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
+            RE_quarter = pd.DataFrame({'季度':quarter, '保留盈餘合計': data_q})
+
+            QRY_TIME = soup.select_one('#QRY_TIME')
+            options = QRY_TIME.find_all('option')
+            values = [item.string for item in options]
+            if len(values) > 7:
+                COUNT = 1
+                for j in range(7, len(values), 7):
+                    try:
+                        #QRY_TIME > option:nth-child(8)
+                        #切換季度
+                        driver.find_element(By.ID, "QRY_TIME").click()
+                        dropdown = driver.find_element(By.ID, "QRY_TIME")
+                        dropdown.find_element(By.CSS_SELECTOR, '#QRY_TIME > option:nth-child(' + str(j+1) + ')').click()
+                        sleep(7)
+                    except Exception as e:
+                        print(stockNo + "沒有" + values(j) + "以前的資產負債表")
+                    else:
+                        #取得季度資料
+                        html = driver.page_source # 取得html文字
+                        soup = BeautifulSoup(html, 'lxml')
+                        table = soup.select_one('#txtFinBody')
+
+                        #資料整理
+                        dfs = pd.read_html(table.prettify())
+                        df = dfs[1]
+                        row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
+                        quarter = df.iloc[0,1:14:2].values
+                        data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
+                        
+                        df = pd.DataFrame({'季度':quarter,'保留盈餘合計': data_q})
+                        RE_quarter = pd.concat([RE_quarter, df], axis = 0, ignore_index = True)
+
+                    COUNT += 1
+                    if COUNT == 4:
+                        break
+
+    finally:
+        driver.close() # 關閉分頁視窗
+        # driver.quit() # 關閉視窗+關閉driver.exe，釋放記憶體
+        
+    return RE_quarter
+
+def parse_PChome_quarter(html):
+    bts = BeautifulSoup(html, 'lxml')
+    quarter = bts.select('#bttb > table > tbody > tr:nth-child(4) > th')
+    eps = bts.select('#bttb > table > tbody > tr:nth-child(15) > td')
+    roe = bts.select('#bttb > table > tbody > tr:nth-child(17) > td')
+    roa = bts.select('#bttb > table > tbody > tr:nth-child(18) > td')
+    # 季度名稱要跟Goodinfo統一
+    Quarter = [quarter[i].text.replace('年第', 'Q')[:6] for i in range(1, len(quarter))]
+    EPS = [eps[i].text for i in range(1, len(eps))]
+    ROE = [roe[i].text for i in range(1, len(roe))]
+    ROA = [roa[i].text for i in range(1, len(roa))]
+
+    EPS_q = pd.DataFrame({'季度':Quarter, '每股稅後盈餘(EPS)':EPS}).replace('-', np.nan).astype({'每股稅後盈餘(EPS)':float})
+    ROE_q = pd.DataFrame({'季度':Quarter, '股東權益報酬率(ROE)':ROE}).replace('-', np.nan).astype({'股東權益報酬率(ROE)':float})
+    ROA_q = pd.DataFrame({'季度':Quarter, '資產報酬率(ROA)':ROA}).replace('-', np.nan).astype({'資產報酬率(ROA)':float})
+
+    return EPS_q, ROE_q, ROA_q
+
+def fetch_EPS_ROE_ROA_quarter(stockNo):
+    # 進入PChome財務比率表
+    driver = webdriver.Chrome()
+    driver.get("https://pchome.megatime.com.tw/stock/sto2/ock2/sid" + stockNo + ".html") 
+    sleep(5) # 等待javascript渲染出來
+
+    html = driver.page_source # 取得html文字
+    bts = BeautifulSoup(html, 'lxml')
+    EPS_q, ROE_q, ROA_q = parse_PChome_quarter(html)
+
+    # 搜尋dropdown，計算季度數量
+    quarter_options = bts.select('#bttb > table > tbody > tr:nth-child(1) > td > div:nth-child(2) > select > option')
+    values = [item.string for item in quarter_options]
+    if len(values) > 8:
+        COUNT = 1
+        for j in range(8, len(values), 8):
+            try:
+                #切換季度
+                dropdown = driver.find_element(By.TAG_NAME,"select")
+                dropdown.find_element(By.CSS_SELECTOR, '#bttb > table > tbody > tr:nth-child(1) > td > div:nth-child(2) > select > option:nth-child(' + str(j+1) + ')').click()
+                sleep(7)
+            except Exception as e:
+                print(stockNo + "沒有" + values(j+1) + "以前的財務比率表")
+            else:
+                #取得季度資料
+                html = driver.page_source # 取得html文字
+                df_eps, df_roe, df_roa = parse_PChome_quarter(html)
+
+                EPS_q = pd.concat([EPS_q, df_eps], axis = 0, ignore_index = True)
+                ROE_q = pd.concat([ROE_q, df_roe], axis = 0, ignore_index = True)
+                ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
+
+            COUNT += 1
+            if COUNT == 4:
+                break
+
+    driver.close() # 關閉分頁視窗
+    # driver.quit() # 關閉視窗+關閉driver.exe，釋放記憶體
+
+    return EPS_q, ROE_q, ROA_q
+
+def fetch_stock_quarter_data():
+    table = pd.read_csv('./database/stock_id.csv', encoding = 'utf-8')
+    stock_list = table['股票代號'].astype(str).values.tolist()
+    for stockNo in stock_list:
+        print(stockNo)
+        file1 = 'database/' + stockNo + '_quarter.csv'
+        if os.path.exists(file1): 
+            continue
+        else:
+            RE_q = fetch_retained_earnings_quarter(stockNo) # 抓Goodinfo
+
+            if isinstance(RE_q, pd.DataFrame) == False: # 如果RE_q不是DataFrame物件代表沒抓到資料
+                print(stockNo + '查無資料！')
+                sleep(3)
+                continue # 跳過抓不到資料的股票代碼
+            else:
+                EPS_q, ROE_q, ROA_q = fetch_EPS_ROE_ROA_quarter(stockNo) # 抓PChome
+                
+                # 合併數據並輸出csv檔
+                data_quarter = pd.concat([RE_q, EPS_q, ROE_q, ROA_q], axis = 1, join = 'inner')
+                data_quarter = data_quarter.loc[:,~data_quarter.columns.duplicated()] 
+                data_quarter.to_csv('database\\' + stockNo + '_quarter.csv', encoding = 'utf-8', index = False)
+                sleep(3)
+
 
 if __name__=='__main__':
+    update_finished = False
+    while not update_finished:
+        try:
+            fetch_stock_quarter_data()
+            fetch_stock_year_data()
+            update_finished = True
+        except Exception as e:
+            print("發生錯誤：", e)
+        finally:
+            sleep(10)
+    if update_finished:
+        print('所有股票爬蟲執行完畢')
+        
 
-    fetch_stock_year_data()
+
 

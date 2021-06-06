@@ -33,6 +33,21 @@ options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消l
 # error: (selenium.common.exceptions.WebDriverException: Message: unknown error : net::ERR_CONNECTION_TIMED_OUT)
 # 連線失敗，請檢察連線
 
+# wrong →→→   driver = webdrive.Chrome(options=options)
+# error: AttributeError: ResultSet object has no attribute 'to_capabilities'.
+# 讀了selenium對應的webriver初始化py檔(source code)，在實例化webdriver時出錯
+# 如果實例化webdriver沒有傳參的話，那麼給他一個默認值
+#         if options is None:
+#             # desired_capabilities stays as passed in
+#             if desired_capabilities is None:
+#                 desired_capabilities = self.create_options().to_capabilities()
+#         else:
+#             if desired_capabilities is None:
+# wrong →→→       desired_capabilities = options.to_capabilities()
+#             else:
+#                 desired_capabilities.update(options.to_capabilities())
+# 解決辦法，把options拿掉，變成driver = webdriver.Chrome
+
 def update_stock_list():
     TWSE_url = 'http://isin.twse.com.tw/isin/C_public.jsp?strMode=2' # 上市
     TPEX_url = 'http://isin.twse.com.tw/isin/C_public.jsp?strMode=4' # 上櫃
@@ -203,7 +218,6 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
     driver = webdriver.Chrome()   
     driver.get('https://goodinfo.tw/StockInfo/index.asp')
     driver.implicitly_wait(1)
-    driver.set_window_size(1242, 706)
 
     #找到最上方查詢框輸入股票代碼並送出
     driver.find_element(By.ID, "txtStockCode").click()
@@ -215,7 +229,6 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
         driver.find_element(By.LINK_TEXT, "資產負債表").click()
         driver.implicitly_wait(3)
     except:
-        driver.close()
         RE_quarter = None
     else:
         #取得2021Q1~2019Q3年的資料
@@ -226,7 +239,6 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
         #資料整理
         dfs = pd.read_html(table.prettify())
         if len(dfs) == 1: # 代表抓不到資料
-            driver.close()
             RE_quarter = None
         else:
             df = dfs[1]
@@ -276,6 +288,101 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
         
     return RE_quarter
 
+def fetch_EPS_ROE_ROA_quarter(stockNo):
+    # 進入Goodinfo首頁  
+    driver = webdriver.Chrome()   
+    driver.get('https://goodinfo.tw/StockInfo/index.asp')
+    driver.implicitly_wait(1)
+
+    #找到最上方查詢框輸入股票代碼並送出
+    driver.find_element(By.ID, "txtStockCode").click()
+    driver.find_element(By.ID, "txtStockCode").send_keys(stockNo)
+    driver.find_element(By.CSS_SELECTOR, "input:nth-child(2)").click()
+    driver.implicitly_wait(3)
+    try:
+        #切換到財務比率表的頁面
+        driver.find_element(By.LINK_TEXT, "財務比率表").click()
+        driver.implicitly_wait(3)
+    except:
+        EPS_q, ROE_q, ROA_q = None, None, None
+    else:
+        #切換為單季
+        driver.find_element(By.ID, "RPT_CAT").click()
+        dropdown = driver.find_element(By.ID, "RPT_CAT")
+        dropdown.find_element(By.XPATH, '//*[@id="RPT_CAT"]/option[1]').click()
+        sleep(5)
+
+        #取得2021Q1~2018Q2年的資料
+        html = driver.page_source # 取得html文字
+        soup = BeautifulSoup(html, 'lxml')
+        table = soup.select_one('#txtFinBody')
+        
+        #資料整理
+        dfs = pd.read_html(table.prettify())
+        if len(dfs) == 1: # 代表抓不到資料
+            EPS_q, ROE_q, ROA_q = None, None, None
+        else:
+            df = dfs[1]
+            quarter = df.iloc[0,1:].values
+            row1 = df.iloc[:,0].values.tolist().index(u'每股稅後盈餘\xa0(元)')
+            row2 = df.iloc[:,0].values.tolist().index('股東權益報酬率  (當季)')
+            row3 = df.iloc[:,0].values.tolist().index('資產報酬率  (當季)')
+            eps = df.iloc[row1,1:].replace('-', np.nan).astype('float').values
+            roe = df.iloc[row2,1:].replace('-', np.nan).astype('float').values
+            roa = df.iloc[row3,1:].replace('-', np.nan).astype('float').values
+            
+            EPS_q = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
+            ROE_q = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
+            ROA_q = pd.DataFrame({'季度':quarter, '資產報酬率(ROA)':roa})
+
+            QRY_TIME = soup.select_one('#QRY_TIME')
+            options = QRY_TIME.find_all('option')
+            values = [item.get('value') for item in options]
+            if len(values) > 10:
+                COUNT = 1
+                for j in range(10, len(values), 10):
+                    try:
+                        #QRY_TIME > option:nth-child(8)
+                        #切換季度
+                        driver.find_element(By.ID, "QRY_TIME").click()
+                        dropdown = driver.find_element(By.ID, "QRY_TIME")
+                        dropdown.find_element(By.CSS_SELECTOR, '#QRY_TIME > option:nth-child(' + str(j+1) + ')').click()
+                        sleep(5)
+                    except Exception as e:
+                        print(stockNo + "沒有" + values(j) + "以前的財務比率表")
+                    else:
+                        #取得季度資料
+                        html = driver.page_source # 取得html文字
+                        soup = BeautifulSoup(html, 'lxml')
+                        table = soup.select_one('#txtFinBody')
+
+                        #資料整理
+                        dfs = pd.read_html(table.prettify())
+                        df = dfs[1]
+                        quarter = df.iloc[0,1:].values
+                        eps = df.iloc[row1,1:].replace('-', np.nan).astype('float').values
+                        roe = df.iloc[row2,1:].replace('-', np.nan).astype('float').values
+                        roa = df.iloc[row3,1:].replace('-', np.nan).astype('float').values
+                        
+                        df_eps = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
+                        df_roe = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
+                        df_roa = pd.DataFrame({'季度':quarter, '資產報酬率(ROA)':roa})
+                        
+                        EPS_q = pd.concat([EPS_q, df_eps], axis = 0, ignore_index = True)
+                        ROE_q = pd.concat([ROE_q, df_roe], axis = 0, ignore_index = True)
+                        ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
+
+                    COUNT += 1
+                    if COUNT == 3:
+                        break
+
+    finally:
+        driver.close() # 關閉分頁視窗
+        # driver.quit() # 關閉視窗+關閉driver.exe，釋放記憶體
+        
+    return EPS_q, ROE_q, ROA_q
+
+
 def parse_PChome_quarter(html):
     bts = BeautifulSoup(html, 'lxml')
     quarter = bts.select('#bttb > table > tbody > tr:nth-child(4) > th')
@@ -294,7 +401,7 @@ def parse_PChome_quarter(html):
 
     return EPS_q, ROE_q, ROA_q
 
-def fetch_EPS_ROE_ROA_quarter(stockNo):
+def fetch_PChome_EPS_ROE_ROA_quarter(stockNo):
     # 進入PChome財務比率表
     driver = webdriver.Chrome()
     driver.get("https://pchome.megatime.com.tw/stock/sto2/ock2/sid" + stockNo + ".html") 

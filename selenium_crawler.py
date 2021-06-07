@@ -265,6 +265,7 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
                         table = soup.select_one('#txtFinBody')
 
                         #資料整理
+                        dfs = pd.read_html(table.prettify())
                         data_q = parse_Goodinfo_RE_quarter(dfs)
                         
                         RE_quarter = pd.concat([RE_quarter, data_q], axis = 0, ignore_index = True)

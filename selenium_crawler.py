@@ -1,16 +1,12 @@
 from time import sleep
-from bs4.builder import HTMLTreeBuilder
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 import os
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-
-# from selenium.webdriver.chrome.options import Options
-# chrome_options = Options()
-# chrome_options.add_argument('--disable-gpu')
 
 options = webdriver.ChromeOptions()
 options.add_argument('--headless') # 可以不讓瀏覽器執行在前景，而是在背景執行（不讓我們肉眼看得見）
@@ -32,21 +28,23 @@ options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消l
 
 # error: (selenium.common.exceptions.WebDriverException: Message: unknown error : net::ERR_CONNECTION_TIMED_OUT)
 # 連線失敗，請檢察連線
-
-# wrong →→→   driver = webdrive.Chrome(options=options)
-# error: AttributeError: ResultSet object has no attribute 'to_capabilities'.
-# 讀了selenium對應的webriver初始化py檔(source code)，在實例化webdriver時出錯
-# 如果實例化webdriver沒有傳參的話，那麼給他一個默認值
-#         if options is None:
-#             # desired_capabilities stays as passed in
-#             if desired_capabilities is None:
-#                 desired_capabilities = self.create_options().to_capabilities()
-#         else:
-#             if desired_capabilities is None:
-# wrong →→→       desired_capabilities = options.to_capabilities()
-#             else:
-#                 desired_capabilities.update(options.to_capabilities())
-# 解決辦法，把options拿掉，變成driver = webdriver.Chrome
+'''
+wrong →→→   driver = webdrive.Chrome(options=options)
+error: AttributeError: ResultSet object has no attribute 'to_capabilities'.
+讀了selenium對應的webriver初始化py檔(source code)，在實例化webdriver時出錯
+如果實例化webdriver沒有傳參的話，那麼給他一個默認值
+        if options is None:
+            # desired_capabilities stays as passed in
+            if desired_capabilities is None:
+                desired_capabilities = self.create_options().to_capabilities()
+        else:
+            if desired_capabilities is None:
+wrong →→→       desired_capabilities = options.to_capabilities()
+            else:
+                desired_capabilities.update(options.to_capabilities())
+解決辦法，把options拿掉，變成driver = webdriver.Chrome()
+解決辦法，使用global options，一樣寫driver = webdriver.Chrome() →→→偶爾可以動，但偶爾又會出錯
+'''
 
 def update_stock_list():
     TWSE_url = 'http://isin.twse.com.tw/isin/C_public.jsp?strMode=2' # 上市
@@ -62,10 +60,11 @@ def update_stock_list():
         id_name.columns = ['股票代號','名稱']
         info = df.loc[:,'上市日':'產業別']
         mystock = pd.concat([id_name, info], axis = 1).dropna(subset = ['名稱'])
-        mystock = mystock[mystock['股票代號'].apply(lambda x: len(x) < 5)] # 篩選小於4位數的股票代碼
+        # mystock['股票代號'].str.zfill(4) 沒有inplace = True但能覆蓋原本的mystock資料
+        mystock = mystock[mystock['股票代號'].apply(lambda x: len(x) == 4)] # 篩選4位數的股票代碼
         stock_list.append(mystock)
 
-    TWstock_list = pd.concat([stock_list[0], stock_list[1]], )
+    TWstock_list = pd.concat([stock_list[0], stock_list[1]])
     TWstock_list.to_csv('database\\stock_id.csv', encoding = 'utf-8', index = False)
 
 def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
@@ -78,7 +77,7 @@ def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
     #找到最上方查詢框輸入股票代碼並送出
     driver.find_element(By.ID, "txtStockCode").click()
     driver.find_element(By.ID, "txtStockCode").send_keys(stockNo)
-    driver.find_element(By.CSS_SELECTOR, "input:nth-child(2)").click()
+    driver.find_element(By.XPATH, '//*[@id="frmStockSearch"]/input[2]').click()
     driver.implicitly_wait(3)
     try:
         #切換到資產負債表的頁面
@@ -105,11 +104,7 @@ def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
             driver.close()
             return None
         else:
-            df = dfs[1]
-            row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-            year = df.iloc[0,1:14:2].replace('-', np.nan).values
-            data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
-            RE_year = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})  
+            RE_year = parse_Goodinfo_RE_year(dfs)
 
             try:
                 #切換年度至2013年
@@ -129,17 +124,22 @@ def fetch_retained_earnings_year(stockNo): # 保留盈餘合計
 
                 #資料整理
                 dfs = pd.read_html(table.prettify())
-                df = dfs[1]
-                row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-                year = df.iloc[0,1:14:2].replace('-', np.nan).values
-                data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
-                df = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
-                RE_year = pd.concat([RE_year, df], axis = 0, ignore_index = True).dropna()
+                data_y = parse_Goodinfo_RE_year(dfs)
+                RE_year = pd.concat([RE_year, data_y], axis = 0, ignore_index = True).dropna()
             finally:
                 driver.close() # 關閉分頁視窗
                 # driver.quit() # 關閉視窗+關閉driver.exe，釋放記憶體
 
             return RE_year
+
+def parse_Goodinfo_RE_year(dfs):
+    df = dfs[1]
+    row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
+    year = df.iloc[0,1:14:2].replace('-', np.nan).values
+    data_y = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
+    RE_year = pd.DataFrame({'年度':year, '保留盈餘合計': data_y})
+
+    return RE_year  
 
 def fetch_EPS_ROE_ROA_year(stockNo):
     # 進入PChome財務比率表
@@ -214,7 +214,7 @@ def fetch_stock_year_data():
                 sleep(3)
 
 def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
-    # 進入Goodinfo首頁  
+    # 進入Goodinfo首頁
     driver = webdriver.Chrome()   
     driver.get('https://goodinfo.tw/StockInfo/index.asp')
     driver.implicitly_wait(1)
@@ -222,7 +222,7 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
     #找到最上方查詢框輸入股票代碼並送出
     driver.find_element(By.ID, "txtStockCode").click()
     driver.find_element(By.ID, "txtStockCode").send_keys(stockNo)
-    driver.find_element(By.CSS_SELECTOR, "input:nth-child(2)").click()
+    driver.find_element(By.XPATH, '//*[@id="frmStockSearch"]/input[2]').click()
     driver.implicitly_wait(3)
     try:
         #切換到資產負債表的頁面
@@ -241,11 +241,7 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
         if len(dfs) == 1: # 代表抓不到資料
             RE_quarter = None
         else:
-            df = dfs[1]
-            row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-            quarter = df.iloc[0,1:14:2].values
-            data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
-            RE_quarter = pd.DataFrame({'季度':quarter, '保留盈餘合計': data_q})
+            RE_quarter = parse_Goodinfo_RE_quarter(dfs)
 
             QRY_TIME = soup.select_one('#QRY_TIME')
             options = QRY_TIME.find_all('option')
@@ -269,14 +265,9 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
                         table = soup.select_one('#txtFinBody')
 
                         #資料整理
-                        dfs = pd.read_html(table.prettify())
-                        df = dfs[1]
-                        row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
-                        quarter = df.iloc[0,1:14:2].values
-                        data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
+                        data_q = parse_Goodinfo_RE_quarter(dfs)
                         
-                        df = pd.DataFrame({'季度':quarter,'保留盈餘合計': data_q})
-                        RE_quarter = pd.concat([RE_quarter, df], axis = 0, ignore_index = True)
+                        RE_quarter = pd.concat([RE_quarter, data_q], axis = 0, ignore_index = True)
 
                     COUNT += 1
                     if COUNT == 4:
@@ -288,8 +279,17 @@ def fetch_retained_earnings_quarter(stockNo): # 保留盈餘合計
         
     return RE_quarter
 
+def parse_Goodinfo_RE_quarter(dfs):
+    df = dfs[1]
+    row = df.iloc[:,0].values.tolist().index('保留盈餘合計')
+    quarter = df.iloc[0,1:14:2].values
+    data_q = df.iloc[row, 1:14:2].replace('-', np.nan).astype('float').values
+    RE_quarter = pd.DataFrame({'季度':quarter, '保留盈餘合計': data_q})
+
+    return RE_quarter
+
 def fetch_EPS_ROE_ROA_quarter(stockNo):
-    # 進入Goodinfo首頁  
+    # 進入Goodinfo首頁
     driver = webdriver.Chrome()   
     driver.get('https://goodinfo.tw/StockInfo/index.asp')
     driver.implicitly_wait(1)
@@ -297,7 +297,7 @@ def fetch_EPS_ROE_ROA_quarter(stockNo):
     #找到最上方查詢框輸入股票代碼並送出
     driver.find_element(By.ID, "txtStockCode").click()
     driver.find_element(By.ID, "txtStockCode").send_keys(stockNo)
-    driver.find_element(By.CSS_SELECTOR, "input:nth-child(2)").click()
+    driver.find_element(By.XPATH, '//*[@id="frmStockSearch"]/input[2]').click()
     driver.implicitly_wait(3)
     try:
         #切換到財務比率表的頁面
@@ -322,18 +322,7 @@ def fetch_EPS_ROE_ROA_quarter(stockNo):
         if len(dfs) == 1: # 代表抓不到資料
             EPS_q, ROE_q, ROA_q = None, None, None
         else:
-            df = dfs[1]
-            quarter = df.iloc[0,1:].values
-            row1 = df.iloc[:,0].values.tolist().index(u'每股稅後盈餘\xa0(元)')
-            row2 = df.iloc[:,0].values.tolist().index('股東權益報酬率  (當季)')
-            row3 = df.iloc[:,0].values.tolist().index('資產報酬率  (當季)')
-            eps = df.iloc[row1,1:].replace('-', np.nan).astype('float').values
-            roe = df.iloc[row2,1:].replace('-', np.nan).astype('float').values
-            roa = df.iloc[row3,1:].replace('-', np.nan).astype('float').values
-            
-            EPS_q = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
-            ROE_q = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
-            ROA_q = pd.DataFrame({'季度':quarter, '資產報酬率(ROA)':roa})
+            EPS_q, ROE_q, ROA_q = parse_Goodinfo_EPS_ROE_ROA_quarter(dfs)
 
             QRY_TIME = soup.select_one('#QRY_TIME')
             options = QRY_TIME.find_all('option')
@@ -355,22 +344,16 @@ def fetch_EPS_ROE_ROA_quarter(stockNo):
                         html = driver.page_source # 取得html文字
                         soup = BeautifulSoup(html, 'lxml')
                         table = soup.select_one('#txtFinBody')
-
-                        #資料整理
-                        dfs = pd.read_html(table.prettify())
-                        df = dfs[1]
-                        quarter = df.iloc[0,1:].values
-                        eps = df.iloc[row1,1:].replace('-', np.nan).astype('float').values
-                        roe = df.iloc[row2,1:].replace('-', np.nan).astype('float').values
-                        roa = df.iloc[row3,1:].replace('-', np.nan).astype('float').values
-                        
-                        df_eps = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
-                        df_roe = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
-                        df_roa = pd.DataFrame({'季度':quarter, '資產報酬率(ROA)':roa})
-                        
-                        EPS_q = pd.concat([EPS_q, df_eps], axis = 0, ignore_index = True)
-                        ROE_q = pd.concat([ROE_q, df_roe], axis = 0, ignore_index = True)
-                        ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
+                        try:
+                            #資料整理
+                            dfs = pd.read_html(table.prettify())
+                            df_eps, df_roe, df_roa = parse_Goodinfo_EPS_ROE_ROA_quarter(dfs)
+                            
+                            EPS_q = pd.concat([EPS_q, df_eps], axis = 0, ignore_index = True)
+                            ROE_q = pd.concat([ROE_q, df_roe], axis = 0, ignore_index = True)
+                            ROA_q = pd.concat([ROA_q, df_roa], axis = 0, ignore_index = True)
+                        except Exception as e:
+                            print('發生錯誤：', e)
 
                     COUNT += 1
                     if COUNT == 3:
@@ -382,6 +365,21 @@ def fetch_EPS_ROE_ROA_quarter(stockNo):
         
     return EPS_q, ROE_q, ROA_q
 
+def parse_Goodinfo_EPS_ROE_ROA_quarter(dfs):
+    df = dfs[1]
+    quarter = df.iloc[0,1:].values
+    row1 = df.iloc[:,0].values.tolist().index(u'每股稅後盈餘\xa0(元)')
+    row2 = df.iloc[:,0].values.tolist().index('股東權益報酬率  (當季)')
+    row3 = df.iloc[:,0].values.tolist().index('資產報酬率  (當季)')
+    eps = df.iloc[row1,1:].replace('-', np.nan).astype('float').values
+    roe = df.iloc[row2,1:].replace('-', np.nan).astype('float').values
+    roa = df.iloc[row3,1:].replace('-', np.nan).astype('float').values
+    
+    EPS_q = pd.DataFrame({'季度':quarter, '每股稅後盈餘(EPS)':eps})
+    ROE_q = pd.DataFrame({'季度':quarter, '股東權益報酬率(ROE)':roe})
+    ROA_q = pd.DataFrame({'季度':quarter, '資產報酬率(ROA)':roa})
+
+    return EPS_q, ROE_q, ROA_q
 
 def parse_PChome_quarter(html):
     bts = BeautifulSoup(html, 'lxml')
@@ -468,6 +466,8 @@ def fetch_stock_quarter_data():
 
 
 if __name__=='__main__':
+    update_stock_list()
+
     update_finished = False
     while not update_finished:
         try:
@@ -477,7 +477,7 @@ if __name__=='__main__':
         except Exception as e:
             print("發生錯誤：", e)
         finally:
-            sleep(10)
+            sleep(3)
     if update_finished:
         print('所有股票爬蟲執行完畢')
         

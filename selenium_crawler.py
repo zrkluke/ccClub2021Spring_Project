@@ -8,23 +8,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 
-options = webdriver.ChromeOptions()
-options.add_argument('--headless') # 可以不讓瀏覽器執行在前景，而是在背景執行（不讓我們肉眼看得見）
-
 # error: (Timed out receiving message from renderer exception)
 # happened randomly at the start of the test after calling for driver.get(url) without throwing any exception, it just freezes
 # "Timed out receiving message from renderer" means that chromedriver can't receive a response from chrome in time, it's a miscommunication between chromedriver and chrome.
-options.add_argument('--disable-gpu') # google document 提到需要加上這個屬性來規避 bug 
 # 主要問題可能是Selenium加載頁面時間過長
-options.add_argument('start-maximized')
-options.add_argument('enable-automation')
-options.add_argument('--no-sandbox')
-options.add_argument('--disable-infobars')
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument('--disable-browser-side-navigation')
 
 # error: (USB: usb_device_handle_win.cc:1056 Failed to read descriptor from node connection)
-options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消log
+# options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消log
 
 # error: (selenium.common.exceptions.WebDriverException: Message: unknown error : net::ERR_CONNECTION_TIMED_OUT)
 # 連線失敗，請檢察連線
@@ -43,7 +33,7 @@ wrong →→→       desired_capabilities = options.to_capabilities()
             else:
                 desired_capabilities.update(options.to_capabilities())
 解決辦法，把options拿掉，變成driver = webdriver.Chrome()
-解決辦法，使用global options，一樣寫driver = webdriver.Chrome() →→→偶爾可以動，但偶爾又會出錯
+嘗試使用global options，一樣寫driver = webdriver.Chrome() →→→偶爾可以動，但偶爾又會出錯
 '''
 
 def update_stock_list():
@@ -188,7 +178,7 @@ def fetch_cash_dividend_year(stockNo):
 
 def fetch_stock_year_data():
     table = pd.read_csv('./database/stock_id.csv', encoding = 'utf-8')
-    stock_list = table['股票代號'].astype(str).values.tolist()
+    stock_list = table['股票代號'].astype(str).str.zfill(4).values.tolist()
     for stockNo in stock_list:
         print(stockNo)
         file1 = 'database/' + stockNo + '_year.csv'
@@ -443,7 +433,7 @@ def fetch_PChome_EPS_ROE_ROA_quarter(stockNo):
 
 def fetch_stock_quarter_data():
     table = pd.read_csv('./database/stock_id.csv', encoding = 'utf-8')
-    stock_list = table['股票代號'].astype(str).values.tolist()
+    stock_list = table['股票代號'].astype('str').str.zfill(4).values.tolist()
     for stockNo in stock_list:
         print(stockNo)
         file1 = 'database/' + stockNo + '_quarter.csv'
@@ -472,6 +462,16 @@ if __name__=='__main__':
     update_finished = False
     while not update_finished:
         try:
+            options = webdriver.ChromeOptions()
+            options.add_argument('--headless') # 可以不讓瀏覽器執行在前景，而是在背景執行（不讓我們肉眼看得見）
+            options.add_argument('--disable-gpu') # google document 提到需要加上這個屬性來規避 bug 
+            options.add_argument('start-maximized')
+            options.add_argument('enable-automation')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-infobars')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-browser-side-navigation')
+            options.add_experimental_option('excludeSwitches', ['enable-logging']) # 取消log
             fetch_stock_quarter_data()
             fetch_stock_year_data()
             update_finished = True

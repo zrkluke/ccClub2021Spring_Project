@@ -13,10 +13,9 @@ app.config.from_object(DevConfig)
 
 # 路由和處理函式配對
 @app.route('/')
-@app.route('/home')
 @app.route('/index')
 def hello():
-    return render_template('index.html', name = 'ccClub')
+    return render_template('mainpage.html', name = 'ccClub')
 
 @app.route('/stock/')
 def stock_query():
@@ -28,7 +27,7 @@ def stock_query():
         if int(stock_id) in table['股票代號'].values:
             stock_name = table[table['股票代號'] == int(stock_id)]['名稱'].values[0]
         else:
-            return render_template('stock.html') # 此股票不存在
+            return render_template('search.html') # 此股票不存在
 
     elif stock_id.isalpha():
 
@@ -36,17 +35,17 @@ def stock_query():
             stock_name = stock_id
             stock_id = str(table[table['名稱'] == stock_id]['股票代號'].values[0])
         else:
-            return render_template('stock.html') # 此股票不存在
+            return render_template('search.html') # 此股票不存在
 
     else:
-        return render_template('stock.html') # 此股票不存在
+        return render_template('search.html') # 此股票不存在
         
     df = pd.read_csv('.\\database\\' + stock_id + '_year.csv')
     column_names = df.columns.tolist()
     df = df.astype({'年度':'object'})
     df = df.values.tolist()
 
-    return render_template('stock.html', stock_name = stock_name, stock_id = stock_id, 
+    return render_template('search.html', stock_name = stock_name, stock_id = stock_id, 
                             column_names = column_names, df = df)
 
 

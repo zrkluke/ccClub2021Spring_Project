@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>查詢</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="../static/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="../static/bootstrap-theme.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    
+    <!-- Custom styles for this template -->
+    <link href="../static/theme.css" rel="stylesheet">
+
+ 
+  </head>
+
+  <body>
+    
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/main">Main</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">查詢</a></li>
+            <li><a href="sss">測試1</a></li>
+            <li><a href="#contact">測試2</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+        
+      </div>
+    </nav>
+    
+    <div class="container theme-showcase" role="main">
+
+      <!-- Main jumbotron for a primary marketing message or call to action -->
+      <div class="jumbotron">
+        <h1>我是首頁</h1>
+        <p>這是一個由一群居家辦公的可憐蟲寫的flask 股票網頁</p>
+        <p>別嫌棄</p>
+      </div>
+      <div class="alert alert-warning" role="alert">
+        <strong>Warning!</strong> 目前股票資料日期為XXXXXX
+      </div>
+
+      <div class="page-header">
+        <h1>股票gogo</h1>
+        <form action={{ url_for('stock_query') }} method="get">
+          <input type="text" name='stock_id' class="form-control" placeholder="請輸入股票代號" style="width: 50%;margin-bottom: 5mm; ">
+          <span class="input-group-btn">
+              <button class="btn btn-lg btn-success" type="submit">
+                  GO ！
+              </button>
+              <script>
+                  $(function() {
+                      $(".btn").click(function(){
+                          $(this).button('loading').delay(1000).queue(function() {
+                          // $(this).button('reset');
+                          // $(this).dequeue(); 
+                          });
+                      });
+                  });  
+              </script>
+          </span>
+      </form>
+      </div>
+
+      <div class="page-header">
+        <h1>Panels</h1>
+      </div>
+      <div class="row">
+        <div class="col-sm-4">
+          <div class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body">
+              Panel content
+            </div>
+          </div>
+          <div class="panel panel-primary">
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body">
+              Panel content
+            </div>
+          </div>
+        </div><!-- /.col-sm-4 -->
+        <div class="col-sm-4">
+          <div class="panel panel-success">
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body">
+              Panel content
+            </div>
+          </div>
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body">
+              Panel content
+            </div>
+          </div>
+        </div><!-- /.col-sm-4 -->
+        <div class="col-sm-4">
+          <div class="panel panel-warning" >
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body">
+              <a href="sss">Panel content</a>
+            </div>
+          </div>
+          <div class="panel panel-danger">
+            <div class="panel-heading">
+              <h3 class="panel-title">Panel title</h3>
+            </div>
+            <div class="panel-body" >
+              Panel content
+            </div>
+          </div>
+        </div><!-- /.col-sm-4 -->
+      </div>
+      
+
+
+      <div class="page-header">
+        <h1>警告</h1>
+      </div>
+      <div class="well">
+        <p>投資有賺有賠，申購前應詳閱公開說明書。</p>
+      </div>
+
+
+
+    </div> <!-- /container -->
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+  </body>
+  
+</html>

@@ -17,7 +17,61 @@
     
     <!-- Custom styles for this template -->
     <link href="../static/theme.css" rel="stylesheet">
-   
+
+    <style>
+      .cell1 {
+          position: relative;
+          display: table-cell;
+          width: 150px;
+          border-right: 1px dotted #fff;
+          padding-left: 20px;
+          padding: 10px;
+          text-align: left;
+          margin-bottom: 10mm;
+      }
+      .cell2 {
+          position: relative;
+          display: table-cell;
+          width: 150px;
+          border-right: 1px dotted #fff;
+          padding-left: 20px;
+          padding: 10px;
+          text-align: right;
+      }
+    </style>
+   <script>
+            var roundDecimal = function (val, precision) {
+            return Math.round(Math.round(val * Math.pow(10, (precision || 0) + 1)) / 10) / Math.pow(10, (precision || 0));
+            }
+
+            function price_calculator(){
+              check_K();
+              calculator();
+            }
+
+            var isOK = false
+            function check_K(){
+            if(form1.K.value == ""){
+                alert("請輸入預期報酬率！");
+                isOK = false;
+            }else if(form1.K.value < {{Growth}}*100){
+                alert("您輸入之預期報酬率小於公司成長率！請重新輸入！");
+                isOK = false;
+            }else{
+                isOK = true;
+            }
+            }
+
+            function calculator(){
+                if (isOK){
+                K = form1.K.value / 100;
+                var GGM = {{D}}*(1+{{Growth}}) / (K - {{Growth}});
+                var SPM = {{EPS}}*{{Growth}} / K**2 + {{D}}/K;
+                document.getElementById('price_GGM').innerHTML = roundDecimal(GGM, 1);
+                document.getElementById('price_SPM').innerHTML = roundDecimal(SPM, 1);
+                }
+            }
+    </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
  
@@ -43,9 +97,11 @@
     </nav>
     
     <div class="container theme-showcase" role="main">
+      <!--
       <div class="alert alert-warning" role="alert">
-        <strong>Warning!</strong> 目前股票資料日期為XXXXXX
+        <strong>Warning!</strong> 目前股票資料日期為{{year_data_time}}
       </div>
+      -->
 
       <div class="page-header">
         <h1>股票gogo</h1>
@@ -69,29 +125,36 @@
       </form>
       </div>
       <div class="page-header">
-        <h1>{{ stock_name }}({{ stock_id }})</h1>
+        <h1>{{ stock_name }}{{ stock_id }}</h1>
+        <h3>{{ result }}</h3>
       </div>
       
       <ul class="nav nav-tabs">
-        <li class="active"><a data-toggle="tab" href="#home">獲利能力</a></li>
-        <li><a data-toggle="tab" href="#menu1">Menu 1</a></li>
-        <li><a data-toggle="tab" href="#menu2">Menu 2</a></li>
+        <li class="active"><a data-toggle="tab" href="#FinYearData">獲利能力(年度)</a></li>
+        <li><a data-toggle="tab" href="#FinQuarterData">獲利能力(季度)</a></li>
+        <li><a data-toggle="tab" href="#StockValuationModel">股價評價模型</a></li>
       </ul>
     
       <div class="tab-content">
-        <div id="home" class="tab-pane fade in active">
+        <div id="FinYearData" class="tab-pane fade in active">
+          <div class="alert alert-warning" role="alert">
+            <strong>Warning!</strong> 目前股票資料日期為{{year_data_time}}
+          </div>
           <div class="row">
             <div class="col-md-10">
               <table class="table table-striped">
                 <thead>
                     <tr>
-                        {% for column in column_names %}
+                        {% for column in column_year %}
+                            {% if column == '保留盈餘合計' %}
+                                {% set column = '保留盈餘合計(億元)' %}
+                            {% endif %}
                             <th>{{ column }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in df %}
+                    {% for row in year_data %}
                         <tr>
                             {% for data in row %}
                                 <td>{{ data }}</td>
@@ -103,13 +166,69 @@
             </div>
           </div>
         </div>
-        <div id="menu1" class="tab-pane fade">
-          <h3>Menu 1</h3>
-          <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+        <div id="FinQuarterData" class="tab-pane fade ">
+          <div class="alert alert-warning" role="alert">
+            <strong>Warning!</strong> 目前股票資料日期為{{quarter_data_time}}
+          </div>
+          <div class="row">
+            <div class="col-md-10">
+              <table class="table table-striped">
+                <thead>
+                    <tr>
+                      {% for column in column_quarter %}
+                        {% if column == '保留盈餘合計' %}
+                          {% set column = '保留盈餘合計(億元)' %} 
+                        {% endif %}
+                        <th>{{ column }}</th>
+                      {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in quarter_data %}
+                        <tr>
+                            {% for data in row %}
+                                <td>{{ data }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div id="menu2" class="tab-pane fade">
-          <h3>Menu 2</h3>
-          <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.</p>
+        <div id="StockValuationModel" class="tab-pane fade ">
+          <div class="row">
+            <div class="col-md-10">
+              <h4>{{stock_name}}{{stock_id}}五年成長率：{{ '%.1f'|format(Growth*100) }}%</h4>
+                  <span><strong>注意！預期報酬率應大於公司成長率</strong></span>
+                  <form name='form1'>
+                    <div class='cell1'>
+                        <input type="floatformat" name='K' placeholder="請輸入預期報酬率" style="width: 150%;margin-bottom: 10mm;" required />
+                    </div>
+                    <div class='cell2'>
+                        <input type="button" value='股價計算' class='calc' onclick="price_calculator()"  >
+                    </div>
+                  </form>
+                  <table class="table table-striped">
+                    <thead>
+                        <tr>
+                          <td>評價模型</td>
+                          <td>股價</td>
+                        <tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                          <td>高登成長模型(GGM)</td>
+                          <td id='price_GGM'></td>
+                        </tr>
+                        <tr>
+                          <td>永續和評價法(SPM)</td>
+                          <td id='price_SPM'></td>
+                        </tr>
+                    </tbody>
+                  </table>
+            </div>
+          </div>
         </div>
       </div>
       

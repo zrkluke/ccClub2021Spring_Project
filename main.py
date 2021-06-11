@@ -4,9 +4,9 @@ from flask import Flask, request, render_template, url_for, redirect
 from config import DevConfig
 import pandas as pd
 import os
-from goodinfo_crawler import *
 import time
 import draw
+
 
 # 初始化 Flask 類別成為 instance
 app = Flask(__name__)
@@ -17,8 +17,7 @@ app.config.from_object(DevConfig)
 @app.route('/index')
 def hello():
     lst = draw.go()   
-    return render_template('mainpage.html', name = 'ccClub'
-    ,lst=lst)
+    return render_template('mainpage.html', name = 'ccClub', lst=lst)
 
 @app.route('/stock/')
 def stock_query():
@@ -67,12 +66,9 @@ def stock_query():
 
 
 
-
 if __name__=='__main__':
     
     app.run(debug=True)
     
 
-
-        
 

@@ -75,65 +75,27 @@
       </div>
 
       <div class="page-header">
-        <h1>Panels</h1>
+        <h1>抽籤資訊</h1>
       </div>
       <div class="row">
-        <div class="col-sm-4">
+      {% for lst in lst %}
+        <div class="col-sm-3">
           <div class="panel panel-default">
             <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
+              <h3 class="panel-title" >{{ lst[1] }} {{ lst[2] }}</h3>
             </div>
             <div class="panel-body">
-              Panel content
-            </div>
-          </div>
-          <div class="panel panel-primary">
-            <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
-            </div>
-            <div class="panel-body">
-              Panel content
+              <p>抽籤日 : {{ lst[0] }}</p>
+              <p>登記期限 : {{ lst[3] }} ~ {{ lst[4] }}</p>
+              <p>股數 : {{ lst[5] }}</p>
+              <p>金額 : {{ lst[6] }}</p>
+              <p>派發日 : {{ lst[7] }}</p>
+              <p><a class="btn btn-primary" href="/stock/?stock_id={{ lst[2] }}" role="button">View details &raquo;</a></p>
             </div>
           </div>
         </div><!-- /.col-sm-4 -->
-        <div class="col-sm-4">
-          <div class="panel panel-success">
-            <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
-            </div>
-            <div class="panel-body">
-              Panel content
-            </div>
-          </div>
-          <div class="panel panel-info">
-            <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
-            </div>
-            <div class="panel-body">
-              Panel content
-            </div>
-          </div>
-        </div><!-- /.col-sm-4 -->
-        <div class="col-sm-4">
-          <div class="panel panel-warning" >
-            <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
-            </div>
-            <div class="panel-body">
-              <a href="sss">Panel content</a>
-            </div>
-          </div>
-          <div class="panel panel-danger">
-            <div class="panel-heading">
-              <h3 class="panel-title">Panel title</h3>
-            </div>
-            <div class="panel-body" >
-              Panel content
-            </div>
-          </div>
-        </div><!-- /.col-sm-4 -->
-      </div>
-      
+      {% endfor %}
+      </div>     
 
 
       <div class="page-header">
